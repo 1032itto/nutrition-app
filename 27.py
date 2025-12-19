@@ -72,9 +72,21 @@ def load_food_db():
 
 
 def save_food_db(df):
-    supabase.table("food_db").delete().neq("food","").execute()
-    supabase.table("food_db").insert(df.to_dict("records")).execute()
-    
+    NUM_COLS = ["kcal", "protein", "fat", "carbs"]
+
+    for col in NUM_COLS:
+        if col in df.columns:
+            df[col] = pd.to_numeric(df[col], errors="coerce")
+
+    # NaN / inf を None に変換（JSON安全化）
+    df = df.replace([float("inf"), float("-inf")], None)
+    df = df.where(pd.notnull(df), None)
+
+    records = df.to_dict("records")
+
+    supabase.table("food_db").insert(records).execute()
+
+
 def load_settings():
     res = supabase.table("settings").select("*").eq("id",1).execute()
     return res.data[0]["data"] if res.data else {}
