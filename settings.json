@@ -1,0 +1,14 @@
+{
+  "theme": "dark",
+  "profile": {
+    "height": 173,
+    "weight": 60.0,
+    "goal": "維持"
+  },
+  "targets": {
+    "kcal": 2342,
+    "protein": 90,
+    "fat": 55,
+    "carbs": 349
+  }
+}
