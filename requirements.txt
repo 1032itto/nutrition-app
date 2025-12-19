@@ -1,6 +1,0 @@
-streamlit
-supabase
-postgrest
-pandas
-matplotlib
-python-dateutil
