@@ -69,6 +69,20 @@ def load_food_db():
 
     return df
 
+def insert_food(records):
+    for r in records:
+        r.pop("id", None)  # ← ここ超重要
+    supabase.table("food_db").insert(records).execute()
+
+def update_food(row):
+    food_id = row["id"]
+    data = row.copy()
+    data.pop("id")
+
+    supabase.table("food_db") \
+        .update(data) \
+        .eq("id", food_id) \
+        .execute()
 
 
 def save_food_db(df):
