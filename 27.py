@@ -86,23 +86,43 @@ def update_food(row):
 
 
 def save_food_db(df):
-    # 数値列を数値化
+    # 数値カラムを完全に数値化
     NUM_COLS = ["kcal", "protein", "fat", "carbs"]
     for col in NUM_COLS:
         if col in df.columns:
-            df[col] = pd.to_numeric(df[col], errors="coerce")
+            df[col] = pd.to_numeric(df[col], errors="coerce").fillna(0)
 
-    # NaN / inf を None に
-    df = df.replace([float("inf"), float("-inf")], None)
-    df = df.where(pd.notnull(df), None)
+    # boolをPythonのboolに統一
+    if "favorite" in df.columns:
+        df["favorite"] = df["favorite"].astype(bool)
 
     records = df.to_dict("records")
 
-    # upsert に変更
-    supabase.table("food_db").upsert(
-        records,
-        on_conflict="id"
-    ).execute()
+    # -----------------------------
+    # 新規（idなし）
+    # -----------------------------
+    new_rows = []
+    for r in records:
+        if not r.get("id"):
+            r.pop("id", None)
+            new_rows.append(r)
+
+    if new_rows:
+        supabase.table("food_db").insert(new_rows).execute()
+
+    # -----------------------------
+    # 更新（idあり）
+    # -----------------------------
+    for r in records:
+        food_id = r.get("id")
+        if food_id:
+            data = r.copy()
+            data.pop("id")
+
+            supabase.table("food_db") \
+                .update(data) \
+                .eq("id", food_id) \
+                .execute()
 
 
 
