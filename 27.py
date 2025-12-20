@@ -37,16 +37,24 @@ def load_log():
     return df
 
 
-def save_log(df):
-    if df.empty:
-        return
-
+def save_log(df, date_key):
+    # 念のため NaN → None
     df = df.where(pd.notnull(df), None)
 
-    supabase.table("nutrition_log").upsert(
-        df.to_dict("records"),
-        on_conflict=["date", "meal", "food"]
-    ).execute()
+    # ① その日だけ削除
+    supabase.table("nutrition_log") \
+        .delete() \
+        .eq("date", date_key) \
+        .execute()
+
+    # ② その日のデータだけ insert
+    day_df = df[df["date"] == date_key]
+
+    if not day_df.empty:
+        supabase.table("nutrition_log") \
+            .insert(day_df.to_dict("records")) \
+            .execute()
+
 
 def load_food_db():
     res = supabase.table("food_db").select("*").execute()
@@ -1273,6 +1281,28 @@ if st.session_state.get("log_dirty"):
             })
 
     if rows:
-        save_log(pd.DataFrame(rows))
+        save_log(pd.DataFrame(rows), date_key)
 
     st.session_state.log_dirty = False
+    
+if st.button("保存"):
+    rows = []
+    for meal, foods in st.session_state.foods_added[date_key].items():
+        for f in foods:
+            rows.append({
+                "date": date_key,
+                "meal": meal,
+                "food": f["food"],
+                "amount": f["amount"],
+                "kcal": float(f["kcal"]),
+                "protein": float(f["protein"]),
+                "fat": float(f["fat"]),
+                "carbs": float(f["carbs"]),
+            })
+
+    if rows:
+        save_log(pd.DataFrame(rows), date_key)
+        st.success("保存しました")
+        st.rerun()
+    else:
+        st.info("保存するデータがありません")
