@@ -93,8 +93,19 @@ def save_food_db(df):
 
 
 def load_settings():
-    res = supabase.table("settings").select("*").eq("id",1).execute()
-    return res.data[0]["data"] if res.data else {}
+    res = supabase.table("settings").select("*").eq("id", 1).execute()
+
+    if res.data:
+        return res.data[0]["data"]
+    else:
+        # 初期設定を作成
+        default = {}
+        supabase.table("settings").insert({
+            "id": 1,
+            "data": default
+        }).execute()
+        return default
+
 
 def save_settings(settings):
     supabase.table("settings").upsert({
