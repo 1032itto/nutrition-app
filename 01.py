@@ -1,3 +1,18 @@
+
+git add .
+git commit -m "use upsert for food_db"
+git push
+
+
+
+
+
+
+
+
+
+
+
 import streamlit as st
 import pandas as pd
 import datetime
