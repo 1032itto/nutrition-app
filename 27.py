@@ -86,6 +86,10 @@ def update_food(row):
 
 
 def save_food_db(df):
+    # id列が無い or NaN の事故防止
+    if "id" not in df.columns:
+        df["id"] = None
+
     # 数値カラムを完全に数値化
     NUM_COLS = ["kcal", "protein", "fat", "carbs"]
     for col in NUM_COLS:
@@ -877,6 +881,7 @@ if st.session_state.page == "food":
 
                     if col1.button("保存"):
                         food_db.loc[i] = {
+                            "id": row["id"],  # ★★★ これが超重要
                             "food": e_food,
                             "unit": e_unit,
                             "kcal": e_kcal,
@@ -885,6 +890,7 @@ if st.session_state.page == "food":
                             "carbs": e_c,
                             "favorite": row["favorite"]
                         }
+
                         save_food_db(food_db)
                         del st.session_state.edit_index
                         st.rerun()
