@@ -116,34 +116,6 @@ def save_food_db(df):
         ).execute()
 
 
-    # -----------------------------
-    # 新規（idなし）
-    # -----------------------------
-    new_rows = []
-    for r in records:
-        if not r.get("id"):
-            r.pop("id", None)
-            new_rows.append(r)
-
-    if new_rows:
-        supabase.table("food_db").insert(new_rows).execute()
-
-    # -----------------------------
-    # 更新（idあり）
-    # -----------------------------
-    for r in records:
-        food_id = r.get("id")
-        if food_id:
-            data = r.copy()
-            data.pop("id")
-
-            supabase.table("food_db") \
-                .update(data) \
-                .eq("id", food_id) \
-                .execute()
-
-
-
 def load_settings():
     res = supabase.table("settings").select("*").eq("id", 1).execute()
 
