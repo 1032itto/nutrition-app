@@ -1,5 +1,5 @@
 # ============================
-# 26.pyから変更、デバイス間共有
+# デバイス間共有可能
 # # ============================
 
 import streamlit as st
@@ -38,14 +38,9 @@ def load_log():
 
 
 def save_log(df):
-    if df.empty:
-        return
-
-    df = df.where(pd.notnull(df), None)
-
-    supabase.table("nutrition_log").upsert(
-        df.to_dict("records"),
-        on_conflict=["date", "meal", "food"]
+    supabase.table("nutrition_log").delete().neq("date","").execute()
+    supabase.table("nutrition_log").insert(
+        df.to_dict("records")
     ).execute()
 
 def load_food_db():
@@ -202,9 +197,6 @@ def load_day_from_csv(date_key, data):
 # ============================
 # 設定用 state 初期化
 # ============================
-if "log_dirty" not in st.session_state:
-    st.session_state.log_dirty = False
-
 
 if "initialized" not in st.session_state:
     saved = load_settings()
@@ -871,7 +863,7 @@ if st.session_state.page == "food":
                         key="e_c"
                     )
 
-                    col1, col2 = st.columns([1, 1], gap="small")
+                    col1, col2 = st.columns(2)
 
                     if col1.button("保存"):
                         food_db.loc[i] = {
@@ -954,8 +946,6 @@ if not filtered.empty:
         for k in calc:
             st.session_state.meals[date_key][meal][k] += calc[k]
 
-        st.session_state.log_dirty = True
-
 # ============================
 # 当日の記録表示・削除
 # ============================
@@ -991,7 +981,6 @@ with tabs[0]:
                 for k in ["kcal", "protein", "fat", "carbs"]:
                     st.session_state.meals[date_key][meal][k] -= f[k]
                 st.session_state.foods_added[date_key][meal].pop(i)
-                st.session_state.log_dirty = True
                 st.rerun()
 
         # --- 小計 ---
@@ -1020,7 +1009,6 @@ for tab, meal in zip(tabs[1:], ["朝", "昼", "夜"]):
                 for k in ["kcal", "protein", "fat", "carbs"]:
                     st.session_state.meals[date_key][meal][k] -= f[k]
                 st.session_state.foods_added[date_key][meal].pop(i)
-                st.session_state.log_dirty = True
                 st.rerun()
 
         m = st.session_state.meals[date_key][meal]
@@ -1255,9 +1243,14 @@ chart = alt.hconcat(kcal_chart, pfc_chart)
 st.altair_chart(chart, use_container_width=True)
 
 # ============================
-# 自動保存
+# 保存
 # ============================
-if st.session_state.get("log_dirty"):
+if st.button("保存"):
+    
+    data = load_log()
+    save_date = date_key 
+    data = data[data["date"] != save_date]
+    
     rows = []
     for meal, foods in st.session_state.foods_added[date_key].items():
         for f in foods:
@@ -1272,7 +1265,8 @@ if st.session_state.get("log_dirty"):
                 "carbs": f["carbs"],
             })
 
-    if rows:
-        save_log(pd.DataFrame(rows))
 
-    st.session_state.log_dirty = False
+    data = pd.concat([data, pd.DataFrame(rows)], ignore_index=True)
+    save_log(data)
+    st.success("保存しました")
+    st.rerun()
