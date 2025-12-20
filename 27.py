@@ -86,15 +86,15 @@ def update_food(row):
 
 
 def save_food_db(df):
-    # 数値カラムを強制的に数値化
     NUM_COLS = ["kcal", "protein", "fat", "carbs"]
+
+    # 数値列を強制的に数値化
     for col in NUM_COLS:
         if col in df.columns:
-            df[col] = pd.to_numeric(df[col], errors="coerce").fillna(0)
+            df[col] = pd.to_numeric(df[col], errors="coerce")
 
-    # id がない行は新規なので削除（upsert 事故防止）
-    if "id" in df.columns:
-        df = df[df["id"].notna()]
+    # ここが重要：NaN → None（JSON OK）
+    df = df.where(pd.notnull(df), None)
 
     records = df.to_dict("records")
 
@@ -102,6 +102,7 @@ def save_food_db(df):
         records,
         on_conflict="id"
     ).execute()
+
 
     # -----------------------------
     # 新規（idなし）
