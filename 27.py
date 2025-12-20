@@ -86,21 +86,22 @@ def update_food(row):
 
 
 def save_food_db(df):
-    # id列が無い or NaN の事故防止
-    if "id" not in df.columns:
-        df["id"] = None
-
-    # 数値カラムを完全に数値化
+    # 数値カラムを強制的に数値化
     NUM_COLS = ["kcal", "protein", "fat", "carbs"]
     for col in NUM_COLS:
         if col in df.columns:
             df[col] = pd.to_numeric(df[col], errors="coerce").fillna(0)
 
-    # boolをPythonのboolに統一
-    if "favorite" in df.columns:
-        df["favorite"] = df["favorite"].astype(bool)
+    # id がない行は新規なので削除（upsert 事故防止）
+    if "id" in df.columns:
+        df = df[df["id"].notna()]
 
     records = df.to_dict("records")
+
+    supabase.table("food_db").upsert(
+        records,
+        on_conflict="id"
+    ).execute()
 
     # -----------------------------
     # 新規（idなし）
