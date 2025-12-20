@@ -88,20 +88,32 @@ def update_food(row):
 def save_food_db(df):
     NUM_COLS = ["kcal", "protein", "fat", "carbs"]
 
-    # 数値列を強制的に数値化
+    # 数値列を数値化
     for col in NUM_COLS:
         if col in df.columns:
             df[col] = pd.to_numeric(df[col], errors="coerce")
 
-    # ここが重要：NaN → None（JSON OK）
+    # NaN → None（JSON対応）
     df = df.where(pd.notnull(df), None)
 
-    records = df.to_dict("records")
+    # -----------------------------
+    # 既存（idあり）
+    # -----------------------------
+    df_existing = df[df["id"].notna()]
+    if not df_existing.empty:
+        supabase.table("food_db").upsert(
+            df_existing.to_dict("records"),
+            on_conflict="id"
+        ).execute()
 
-    supabase.table("food_db").upsert(
-        records,
-        on_conflict="id"
-    ).execute()
+    # -----------------------------
+    # 新規（idなし）
+    # -----------------------------
+    df_new = df[df["id"].isna()].drop(columns=["id"])
+    if not df_new.empty:
+        supabase.table("food_db").insert(
+            df_new.to_dict("records")
+        ).execute()
 
 
     # -----------------------------
