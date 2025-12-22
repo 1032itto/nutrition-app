@@ -162,8 +162,6 @@ def calc_total_nutrition(ingredient_rows):
     return totals
 
 
-
-
 def load_settings():
     res = supabase.table("settings").select("*").eq("id", 1).execute()
 
@@ -957,6 +955,7 @@ if st.session_state.page == "recipe":
 
         use = cols[0].checkbox(row["food"], key=f"use_{row['id']}")
 
+        # 表示用単位
         disp_unit = (
             "g" if row["unit"] == "100g"
             else "mL" if row["unit"] == "100mL"
@@ -972,6 +971,7 @@ if st.session_state.page == "recipe":
         if use and amount > 0:
             ingredient_rows.append((row, amount))
 
+    # -------- 栄養計算 --------
     if ingredient_rows and dish_name:
         totals = calc_total_nutrition(ingredient_rows)
 
@@ -981,11 +981,15 @@ if st.session_state.page == "recipe":
         st.write(f"脂質: {totals['fat']:.1f} g")
         st.write(f"炭水化物: {totals['carbs']:.1f} g")
 
+        # -------- 保存 --------
         if st.button("この料理を食品DBに登録"):
             result = supabase.table("food_db").insert({
                 "food": dish_name,
                 "unit": "1人前",
-                **totals,
+                "kcal": totals["kcal"],
+                "protein": totals["protein"],
+                "fat": totals["fat"],
+                "carbs": totals["carbs"],
                 "favorite": False
             }).execute()
 
@@ -997,7 +1001,7 @@ if st.session_state.page == "recipe":
                     "dish_id": dish_id,
                     "ingredient_id": row["id"],
                     "amount": amount,
-                    "unit": row["unit"]
+                    "unit": row["unit"]  # ★ DB基準単位を保存
                 })
 
             supabase.table("recipe_items").insert(recipe_records).execute()
@@ -1006,6 +1010,7 @@ if st.session_state.page == "recipe":
             st.rerun()
 
     st.stop()
+
 
     
 
