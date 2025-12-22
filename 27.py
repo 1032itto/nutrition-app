@@ -57,18 +57,12 @@ def save_log(df, date_key):
 
 
 def load_food_db():
-    NUM_COLS = ["kcal", "protein", "fat", "carbs", "unit_weight"]
-
-    for col in NUM_COLS:
-        if col in food_db.columns:
-            food_db[col] = pd.to_numeric(food_db[col], errors="coerce")
-
     res = supabase.table("food_db").select("*").execute()
     df = pd.DataFrame(res.data)
 
     if df.empty:
         return pd.DataFrame(columns=[
-            "food","unit","kcal","protein","fat","carbs","favorite"
+            "food", "unit", "kcal", "protein", "fat", "carbs", "favorite"
         ])
 
     # unit補正
@@ -81,12 +75,17 @@ def load_food_db():
     # favorite補正
     if "favorite" not in df.columns:
         df["favorite"] = False
+    else:
+        df["favorite"] = df["favorite"].fillna(False)
 
-    # 数値列をfloat化
-    for col in ["kcal", "protein", "fat", "carbs"]:
-        df[col] = pd.to_numeric(df[col], errors="coerce").fillna(0.0)
+    # 数値列をfloat化（NaN完全防御）
+    NUM_COLS = ["kcal", "protein", "fat", "carbs", "unit_weight"]
+    for col in NUM_COLS:
+        if col in df.columns:
+            df[col] = pd.to_numeric(df[col], errors="coerce").fillna(0.0)
 
     return df
+
 
 
 def amount_to_grams(food, amount, unit):
