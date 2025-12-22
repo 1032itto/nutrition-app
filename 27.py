@@ -444,18 +444,21 @@ st.title("PFC・カロリー自動計算アプリ")
 if "page" not in st.session_state:
     st.session_state.page = "main"
 
-col1, col2, col3, col4, col5, col6 = st.columns(6)
+col1, col2, col3, col4, col5, col6, col7 = st.columns(7)
+
 if col1.button("メイン"):
     st.session_state.page = "main"
 if col2.button("食品DB"):
     st.session_state.page = "food"
-if col3.button("週間"):
+if col3.button("料理作成"):
+    st.session_state.page = "recipe"
+if col4.button("週間"):
     st.session_state.page = "weekly"
-if col4.button("月間"):
+if col5.button("月間"):
     st.session_state.page = "monthly"
-if col5.button("履歴"):
+if col6.button("履歴"):
     st.session_state.page = "history"
-if col6.button("設定"):
+if col7.button("設定"):
     st.session_state.page = "settings"
 
 data = load_log()
@@ -937,6 +940,13 @@ if st.session_state.page == "food":
                         del st.session_state.edit_index
                         st.rerun()
     
+    
+    
+# ============================
+# 料理作成
+# ============================
+if st.session_state.page == "recipe":
+
     st.subheader("料理を作成")
 
     dish_name = st.text_input("料理名")
