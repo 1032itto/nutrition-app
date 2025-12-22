@@ -129,27 +129,6 @@ def save_food_db(df):
         ).execute()
         
         
-def calc_total_nutrition(ingredients):
-    total = {
-        "kcal": 0.0,
-        "protein": 0.0,
-        "fat": 0.0,
-        "carbs": 0.0,
-    }
-
-    for food, amount in ingredients:
-        base = 100.0  # 100g基準（必要なら後で改良）
-
-        ratio = amount / base
-
-        for k in total:
-            value = food[k]
-            if pd.notna(value):
-                total[k] += float(value) * ratio
-
-    return total
-
-
 
 def load_settings():
     res = supabase.table("settings").select("*").eq("id", 1).execute()
@@ -922,60 +901,6 @@ if st.session_state.page == "food":
                     if col2.button("キャンセル"):
                         del st.session_state.edit_index
                         st.rerun()
-    
-    st.subheader("料理を作成")
-
-    dish_name = st.text_input("料理名")
-
-    st.caption("使う材料と量を選んでください")
-    ingredient_rows = []
-
-    for i, row in food_db.iterrows():
-        with st.container():
-            cols = st.columns([3, 2, 2])
-            use = cols[0].checkbox(row["name"], key=f"use_{row['id']}")
-            amount = cols[1].number_input(
-                "量",
-                min_value=0.0,
-                step=1.0,
-                key=f"amt_{row['id']}"
-            )
-            unit = cols[2].write(row["unit"])
-
-            if use and amount > 0:
-                ingredient_rows.append((row, amount))
-                
-    if ingredient_rows and dish_name:
-        totals = calc_total_nutrition(ingredient_rows)
-
-        st.markdown("###栄養合計")
-        st.write(f"カロリー: {totals['kcal']:.1f} kcal")
-        st.write(f"たんぱく質: {totals['protein']:.1f} g")
-        st.write(f"脂質: {totals['fat']:.1f} g")
-        st.write(f"炭水化物: {totals['carbs']:.1f} g")
-        
-    if st.button("この料理を食品DBに登録"):
-        new_row = {
-            "id": None,  # ← Supabaseで自動採番
-            "name": dish_name,
-            "unit": "1人前",
-            "kcal": totals["kcal"],
-            "protein": totals["protein"],
-            "fat": totals["fat"],
-            "carbs": totals["carbs"],
-            "favorite": False,
-        }
-
-        food_db = pd.concat([food_db, pd.DataFrame([new_row])], ignore_index=True)
-        save_food_db(food_db)
-
-        st.success("料理を登録しました")
-        st.rerun()
-
-
-
-
-
     
     st.stop()
     
