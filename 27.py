@@ -939,7 +939,7 @@ if st.session_state.page == "food":
                     if col2.button("キャンセル"):
                         del st.session_state.edit_index
                         st.rerun()
-    
+    st.stop()
     
     
 # ============================
@@ -1008,7 +1008,7 @@ if st.session_state.page == "recipe":
             st.success("料理＋材料内訳を保存しました")
             st.rerun()
 
-    
+
     st.stop()
     
 
