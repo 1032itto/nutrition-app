@@ -1,5 +1,5 @@
 # ============================
-# 30.pyから変更、自動保存
+# 31.pyから変更、料理作成
 # # ============================
 
 import streamlit as st
@@ -947,7 +947,7 @@ if st.session_state.page == "food":
     for i, row in food_db.iterrows():
         with st.container():
             cols = st.columns([3, 2, 2])
-            use = cols[0].checkbox(row["name"], key=f"use_{row['id']}")
+            use = cols[0].checkbox(row["food"], key=f"use_{row['id']}")
             amount = cols[1].number_input(
                 "量",
                 min_value=0.0,
