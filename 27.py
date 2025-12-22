@@ -1006,6 +1006,7 @@ if st.session_state.page == "recipe":
 
             supabase.table("recipe_items").insert(recipe_records).execute()
 
+            st.write(recipe_records)
             st.success("料理を登録しました")
             st.rerun()
 
