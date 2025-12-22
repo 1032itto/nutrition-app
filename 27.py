@@ -147,21 +147,20 @@ def save_food_db(df):
         ).execute()
         
         
-def calc_total_nutrition(ingredients):
-    total = {k: 0.0 for k in ["kcal", "protein", "fat", "carbs"]}
+def calc_total_nutrition(ingredient_rows):
+    totals = {"kcal": 0, "protein": 0, "fat": 0, "carbs": 0}
 
-    for food, amount, unit in ingredients:
-        grams = amount_to_grams(food, amount, unit)
-        if grams is None:
-            continue
+    for row, amount in ingredient_rows:
+        if row["unit"] in ["100g", "100mL"]:
+            factor = amount / 100
+        else:
+            factor = amount
 
-        ratio = grams / 100.0
+        for k in totals:
+            totals[k] += row[k] * factor
 
-        for k in total:
-            if pd.notna(food[k]):
-                total[k] += float(food[k]) * ratio
+    return totals
 
-    return total
 
 
 
@@ -948,44 +947,43 @@ if st.session_state.page == "food":
 if st.session_state.page == "recipe":
 
     st.subheader("料理を作成")
-
     dish_name = st.text_input("料理名")
 
     st.caption("使う材料と量を選んでください")
     ingredient_rows = []
 
-    for i, row in food_db.iterrows():
-        with st.container():
-            cols = st.columns([3, 2, 2])
-            use = cols[0].checkbox(row["food"], key=f"use_{row['id']}")
-            amount = cols[1].number_input(
-                "量",
-                min_value=0.0,
-                step=1.0,
-                key=f"amt_{row['id']}"
-            )
-            unit = cols[2].selectbox(
-                "単位",
-                ["g", "ml", "個", "枚"],
-                key=f"unit_{row['id']}"
-            )
+    for _, row in food_db.iterrows():
+        cols = st.columns([3, 2])
 
-    if use and amount > 0:
-        ingredient_rows.append((row, amount, unit))
+        use = cols[0].checkbox(row["food"], key=f"use_{row['id']}")
 
-        if ingredient_rows and dish_name:
-            totals = calc_total_nutrition(ingredient_rows)
+        disp_unit = (
+            "g" if row["unit"] == "100g"
+            else "mL" if row["unit"] == "100mL"
+            else row["unit"]
+        )
 
-            st.markdown("###栄養合計")
-            st.write(f"カロリー: {totals['kcal']:.1f} kcal")
-            st.write(f"たんぱく質: {totals['protein']:.1f} g")
-            st.write(f"脂質: {totals['fat']:.1f} g")
-            st.write(f"炭水化物: {totals['carbs']:.1f} g")
-            
+        amount = cols[1].number_input(
+            f"量（{disp_unit}）",
+            min_value=0.0,
+            key=f"amt_{row['id']}"
+        )
+
+        if use and amount > 0:
+            ingredient_rows.append((row, amount))
+
+    if ingredient_rows and dish_name:
+        totals = calc_total_nutrition(ingredient_rows)
+
+        st.markdown("### 栄養合計")
+        st.write(f"カロリー: {totals['kcal']:.1f} kcal")
+        st.write(f"たんぱく質: {totals['protein']:.1f} g")
+        st.write(f"脂質: {totals['fat']:.1f} g")
+        st.write(f"炭水化物: {totals['carbs']:.1f} g")
+
         if st.button("この料理を食品DBに登録"):
-            # ① 料理を保存
             result = supabase.table("food_db").insert({
-                "name": dish_name,
+                "food": dish_name,
                 "unit": "1人前",
                 **totals,
                 "favorite": False
@@ -993,23 +991,22 @@ if st.session_state.page == "recipe":
 
             dish_id = result.data[0]["id"]
 
-            # ② 材料内訳を保存
             recipe_records = []
-            for food, amount, unit in ingredient_rows:
+            for row, amount in ingredient_rows:
                 recipe_records.append({
                     "dish_id": dish_id,
-                    "ingredient_id": food["id"],
+                    "ingredient_id": row["id"],
                     "amount": amount,
-                    "unit": unit,
+                    "unit": row["unit"]
                 })
 
             supabase.table("recipe_items").insert(recipe_records).execute()
 
-            st.success("料理＋材料内訳を保存しました")
+            st.success("料理を登録しました")
             st.rerun()
 
-
     st.stop()
+
     
 
 # ============================
