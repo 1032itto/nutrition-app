@@ -57,12 +57,6 @@ def save_log(df, date_key):
 
 
 def load_food_db():
-    NUM_COLS = ["kcal", "protein", "fat", "carbs", "unit_weight"]
-
-    for col in NUM_COLS:
-        if col in food_db.columns:
-            food_db[col] = pd.to_numeric(food_db[col], errors="coerce")
-
     res = supabase.table("food_db").select("*").execute()
     df = pd.DataFrame(res.data)
 
@@ -88,23 +82,10 @@ def load_food_db():
 
     return df
 
-
-def amount_to_grams(food, amount, unit):
-    if unit in ["g", "ml"]:
-        return amount
-
-    if unit in ["個", "枚"]:
-        if pd.notna(food["unit_weight"]):
-            return amount * food["unit_weight"]
-
-    return None
-
-
 def insert_food(records):
     for r in records:
         r.pop("id", None)  # ← ここ超重要
     supabase.table("food_db").insert(records).execute()
-
 
 def update_food(row):
     food_id = row["id"]
@@ -149,18 +130,22 @@ def save_food_db(df):
         
         
 def calc_total_nutrition(ingredients):
-    total = {k: 0.0 for k in ["kcal", "protein", "fat", "carbs"]}
+    total = {
+        "kcal": 0.0,
+        "protein": 0.0,
+        "fat": 0.0,
+        "carbs": 0.0,
+    }
 
-    for food, amount, unit in ingredients:
-        grams = amount_to_grams(food, amount, unit)
-        if grams is None:
-            continue
+    for food, amount in ingredients:
+        base = 100.0  # 100g基準（必要なら後で改良）
 
-        ratio = grams / 100.0
+        ratio = amount / base
 
         for k in total:
-            if pd.notna(food[k]):
-                total[k] += float(food[k]) * ratio
+            value = food[k]
+            if pd.notna(value):
+                total[k] += float(value) * ratio
 
     return total
 
@@ -955,49 +940,41 @@ if st.session_state.page == "food":
                 step=1.0,
                 key=f"amt_{row['id']}"
             )
-            unit = cols[2].selectbox(
-                "単位",
-                ["g", "ml", "個", "枚"],
-                key=f"unit_{row['id']}"
-            )
+            unit = cols[2].write(row["unit"])
 
-    if use and amount > 0:
-        ingredient_rows.append((row, amount, unit))
+            if use and amount > 0:
+                ingredient_rows.append((row, amount))
+                
+    if ingredient_rows and dish_name:
+        totals = calc_total_nutrition(ingredient_rows)
 
-        if ingredient_rows and dish_name:
-            totals = calc_total_nutrition(ingredient_rows)
+        st.markdown("###栄養合計")
+        st.write(f"カロリー: {totals['kcal']:.1f} kcal")
+        st.write(f"たんぱく質: {totals['protein']:.1f} g")
+        st.write(f"脂質: {totals['fat']:.1f} g")
+        st.write(f"炭水化物: {totals['carbs']:.1f} g")
+        
+    if st.button("この料理を食品DBに登録"):
+        new_row = {
+            "id": None,  # ← Supabaseで自動採番
+            "name": dish_name,
+            "unit": "1人前",
+            "kcal": totals["kcal"],
+            "protein": totals["protein"],
+            "fat": totals["fat"],
+            "carbs": totals["carbs"],
+            "favorite": False,
+        }
 
-            st.markdown("###栄養合計")
-            st.write(f"カロリー: {totals['kcal']:.1f} kcal")
-            st.write(f"たんぱく質: {totals['protein']:.1f} g")
-            st.write(f"脂質: {totals['fat']:.1f} g")
-            st.write(f"炭水化物: {totals['carbs']:.1f} g")
-            
-        if st.button("この料理を食品DBに登録"):
-            # ① 料理を保存
-            result = supabase.table("food_db").insert({
-                "name": dish_name,
-                "unit": "1人前",
-                **totals,
-                "favorite": False
-            }).execute()
+        food_db = pd.concat([food_db, pd.DataFrame([new_row])], ignore_index=True)
+        save_food_db(food_db)
 
-            dish_id = result.data[0]["id"]
+        st.success("料理を登録しました")
+        st.rerun()
 
-            # ② 材料内訳を保存
-            recipe_records = []
-            for food, amount, unit in ingredient_rows:
-                recipe_records.append({
-                    "dish_id": dish_id,
-                    "ingredient_id": food["id"],
-                    "amount": amount,
-                    "unit": unit,
-                })
 
-            supabase.table("recipe_items").insert(recipe_records).execute()
 
-            st.success("料理＋材料内訳を保存しました")
-            st.rerun()
+
 
     
     st.stop()
