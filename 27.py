@@ -887,12 +887,23 @@ if st.session_state.page == "food":
                     st.divider()
                     st.markdown("### 食品を編集")
 
-                    e_food = st.text_input("食品名", row["food"], key="e_food")
+                    key_suffix = f"_{edit_id}"
+
+                    e_food = st.text_input(
+                        "食品名",
+                        row["food"],
+                        key=f"e_food{key_suffix}"
+                    )
 
                     unit_index = UNITS.index(row["unit"]) if row["unit"] in UNITS else 0
-                    e_unit = st.selectbox("単位", UNITS, index=unit_index, key="e_unit")
+                    e_unit = st.selectbox(
+                        "単位",
+                        UNITS,
+                        index=unit_index,
+                        key=f"e_unit{key_suffix}"
+                    )
 
-                    # ★ 編集用の per_label をここで作る（重要）
+                    # ★ 編集用 per_label
                     edit_per_label = (
                         f"{e_unit}あたり"
                         if e_unit in ["100g", "100mL"]
@@ -902,27 +913,27 @@ if st.session_state.page == "food":
                     e_kcal = st.number_input(
                         f"{edit_per_label}のカロリー",
                         value=float(row["kcal"]),
-                        key="e_kcal"
+                        key=f"e_kcal{key_suffix}"
                     )
                     e_p = st.number_input(
                         f"{edit_per_label}のたんぱく質",
                         value=float(row["protein"]),
-                        key="e_p"
+                        key=f"e_p{key_suffix}"
                     )
                     e_f = st.number_input(
                         f"{edit_per_label}の脂質",
                         value=float(row["fat"]),
-                        key="e_f"
+                        key=f"e_f{key_suffix}"
                     )
                     e_c = st.number_input(
                         f"{edit_per_label}の炭水化物",
                         value=float(row["carbs"]),
-                        key="e_c"
+                        key=f"e_c{key_suffix}"
                     )
 
                     col1, col2 = st.columns([1, 1], gap="small")
 
-                    if col1.button("保存"):
+                    if col1.button("保存", key=f"save{key_suffix}"):
                         supabase.table("food_db").update({
                             "food": e_food,
                             "unit": e_unit,
@@ -936,12 +947,12 @@ if st.session_state.page == "food":
                         st.success("保存しました")
                         st.rerun()
 
-
-                    if col2.button("キャンセル"):
+                    if col2.button("キャンセル", key=f"cancel{key_suffix}"):
                         del st.session_state.edit_id
                         st.rerun()
 
-    st.stop()
+                st.stop()
+
     
     
 # ============================
