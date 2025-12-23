@@ -846,38 +846,43 @@ if st.session_state.page == "food":
 
                         # お気に入り
                         fav_label = "★" if row["favorite"] else "☆"
-                        if cols[6].button(fav_label, key=f"fav_{idx}"):
-                            food_db.loc[idx, "favorite"] = not row["favorite"]
-                            save_food_db(food_db)
+                        if cols[6].button(fav_label, key=f"fav_{row['id']}"):
+                            supabase.table("food_db").update(
+                                {"favorite": not row["favorite"]}
+                            ).eq("id", row["id"]).execute()
+
                             st.rerun()
 
+
                         # ✏ 編集
-                        edit = cols[7].button("✏", key=f"edit_{idx}")
+                        edit = cols[7].button("✏", key=f"edit_{row['id']}")
 
                         # 🗑 削除
-                        delete = cols[8].button("🗑", key=f"del_{idx}")
+                        delete = cols[8].button("🗑", key=f"del_{row['id']}")
 
                         # =========================
                         # 削除
                         # =========================
                         if delete:
-                            food_db = food_db.drop(idx).reset_index(drop=True)
-                            save_food_db(food_db)
+                            # Supabaseから削除（id基準）
+                            supabase.table("food_db").delete().eq("id", row["id"]).execute()
 
+                            st.success("削除しました")
                             st.rerun()
+
 
                         # =========================
                         # 編集
                         # =========================
                         if edit:
-                            st.session_state.edit_index = idx
+                            st.session_state.edit_id = row["id"]
 
                 # =========================
                 # 編集フォーム
                 # =========================
                 if "edit_index" in st.session_state:
-                    i = st.session_state.edit_index
-                    row = food_db.loc[i]
+                    edit_id = st.session_state.edit_id
+                    row = food_db[food_db["id"] == edit_id].iloc[0]
 
                     st.divider()
                     st.markdown("### 食品を編集")
@@ -918,24 +923,24 @@ if st.session_state.page == "food":
                     col1, col2 = st.columns([1, 1], gap="small")
 
                     if col1.button("保存"):
-                        food_db.loc[i] = {
-                            "id": row["id"],  # ★★★ これが超重要
+                        supabase.table("food_db").update({
                             "food": e_food,
                             "unit": e_unit,
                             "kcal": e_kcal,
                             "protein": e_p,
                             "fat": e_f,
                             "carbs": e_c,
-                            "favorite": row["favorite"]
-                        }
+                        }).eq("id", row["id"]).execute()
 
-                        save_food_db(food_db)
-                        del st.session_state.edit_index
+                        del st.session_state.edit_id
+                        st.success("保存しました")
                         st.rerun()
+
 
                     if col2.button("キャンセル"):
-                        del st.session_state.edit_index
+                        del st.session_state.edit_id
                         st.rerun()
+
     st.stop()
     
     
