@@ -880,7 +880,7 @@ if st.session_state.page == "food":
                 # =========================
                 # 編集フォーム
                 # =========================
-                if "edit_index" in st.session_state:
+                if "edit_id" in st.session_state:
                     edit_id = st.session_state.edit_id
                     row = food_db[food_db["id"] == edit_id].iloc[0]
 
